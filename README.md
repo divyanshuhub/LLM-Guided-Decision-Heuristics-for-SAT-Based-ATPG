@@ -113,12 +113,15 @@ Statistical comparison must be included.
 
 
 7. Deliverables
-1. SAT-based ATPG implementation
-2. LLM integration module
-3. Experimental evaluation report
-4. Complexity analysis
-5. Discussion on scalability and limitations
+   
+- 1. SAT-based ATPG implementation
+- 2. LLM integration module
+- 3. Experimental evaluation report
+- 4. Complexity analysis
+- 5. Discussion on scalability and limitations
+
 Bonus (optional):
+
 - Extension to transition faults
 - LLM-guided test point insertion
 - Learning across multiple circuits
