@@ -1,0 +1,67 @@
+INPUT LAYER
+-------------------------------------------------------------------
+benchParser.py      Reads ISCAS85 .bench files (industry-standard
+                    benchmark circuits like c17, c432, c7552).
+                    Output: ParsedNetlist
+
+yosysParser.py      Reads Yosys JSON netlists (your own Verilog
+                    designs after synthesis).
+                    Output: ParsedNetlist
+
+yosysModels.py      Defines what a ParsedNetlist IS — the Pydantic
+                    schema for Gate, GateType, ParsedNetlist.
+                    Both parsers produce this same object so
+                    everything downstream is format-agnostic.
+
+
+ENCODING LAYER
+-------------------------------------------------------------------
+cnfEncoder.py       Takes a ParsedNetlist, walks every gate in
+                    topological order, and writes Tseitin clauses.
+                    Each gate output wire → unique integer variable.
+                    Output: CNFFormula (var_map + clauses)
+
+
+MITER LAYER
+-------------------------------------------------------------------
+mitter.py           Runs cnfEncoder TWICE on the same circuit:
+                    once as good copy (g_ prefix, vars 1..N)
+                    once as faulty copy (f_ prefix, vars N+1..M)
+
+                    Then adds three things:
+                    1. PI tie clauses  — g_a ↔ f_a for every input
+                    2. Fault injection — forces f_wire = 0 or 1
+                    3. Miter output    — OR(XOR(g_out, f_out)) = 1
+
+                    Output: MiterResult
+                            (good encoder, faulty encoder, formula)
+
+
+SOLVING LAYER
+-------------------------------------------------------------------
+satSolver.py        Takes the MiterResult, feeds the clauses to
+                    PySAT (Glucose4), and extracts EVERYTHING:
+                    - SAT/UNSAT
+                    - test vector (PI values from model)
+                    - decisions, conflicts, propagations, restarts
+                    - learned clauses (CDCL clause learning count)
+                    - DRUP proof (exact learned conflict clauses)
+                    - UNSAT core (which assumptions caused UNSAT)
+                    Output: SolveMetrics
+
+
+ATPG ENGINE (next)
+-------------------------------------------------------------------
+atpgEngine.py       The main loop. For every wire in the circuit,
+                    for both SA0 and SA1:
+                      1. Call build_miter()
+                      2. Call solve()
+                      3. Collect SolveMetrics
+                    Computes fault coverage at the end.
+                    Output: List of per-fault result dicts
+
+
+BENCHMARK RUNNER (last)
+-------------------------------------------------------------------
+runBenchmarks.py    Loads every ISCAS85 circuit, calls atpgEngine,
+                    writes per-circuit CSV files and a summary CSV.
